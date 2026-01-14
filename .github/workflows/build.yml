@@ -1,0 +1,44 @@
+name: 🫀 Pulso Build Manual
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: 📦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: stable
+
+      - name: 📚 Instalar dependências
+        run: flutter pub get
+
+      - name: 🧹 Limpar build
+        run: flutter clean
+
+      - name: 🔨 Compilar APK Debug
+        run: flutter build apk --debug
+
+      - name: 🗑️ Apagar artefatos antigos
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: app-debug
+          failOnError: false
+
+      - name: 🚀 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: build/app/outputs/flutter-apk/app-debug.apk

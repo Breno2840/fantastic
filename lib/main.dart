@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'core/theme.dart';
+import 'widgets/neon_avatar.dart';
 
 void main() {
   runApp(const PulsoApp());
@@ -30,6 +31,11 @@ class _ChatScreenState extends State<ChatScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController controller;
   late Animation<double> pulse;
+  final TextEditingController textController = TextEditingController();
+  final List<Map<String, dynamic>> messages = [
+    {'mine': false, 'text': 'Ei! Como você está?', 'time': '21:35'},
+    {'mine': true, 'text': 'Estou bem! E você?', 'time': '21:36'},
+  ];
 
   @override
   void initState() {
@@ -44,6 +50,17 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void sendPulse() {
+    if (textController.text.trim().isEmpty) return;
+
+    setState(() {
+      messages.add({
+        'mine': true,
+        'text': textController.text.trim(),
+        'time': TimeOfDay.now().format(context),
+      });
+    });
+
+    textController.clear();
     controller.forward().then((_) => controller.reverse());
   }
 
@@ -67,14 +84,13 @@ class _ChatScreenState extends State<ChatScreen>
             children: [
               topBar(),
               Expanded(
-                child: ListView(
+                child: ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  children: const [
-                    Bubble(false, 'Ei! Como você está?', '21:35'),
-                    Bubble(true, 'Estou bem! E você?', '21:36'),
-                    Bubble(true, 'Tenho novidades para te contar!', '21:36'),
-                    Bubble(false, 'Sério? Me conta!', '21:37'),
-                  ],
+                  itemCount: messages.length,
+                  itemBuilder: (_, i) {
+                    final m = messages[i];
+                    return Bubble(m['mine'], m['text'], m['time']);
+                  },
                 ),
               ),
               inputBar(),
@@ -89,10 +105,10 @@ class _ChatScreenState extends State<ChatScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       child: Row(
-        children: [
-          neonAvatar(),
-          const SizedBox(width: 12),
-          const Expanded(
+        children: const [
+          NeonAvatar(),
+          SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -106,32 +122,10 @@ class _ChatScreenState extends State<ChatScreen>
               ],
             ),
           ),
-          const Icon(Icons.lock, color: Colors.white70),
-          const SizedBox(width: 12),
-          const Icon(Icons.settings, color: Colors.white70),
+          Icon(Icons.lock, color: Colors.white70),
+          SizedBox(width: 12),
+          Icon(Icons.settings, color: Colors.white70),
         ],
-      ),
-    );
-  }
-
-  Widget neonAvatar() {
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF6A5CFF),
-            Color(0xFF1BC9FF),
-          ],
-        ),
-        boxShadow: const [
-          BoxShadow(color: Color(0xFF6A5CFF), blurRadius: 12),
-        ],
-      ),
-      child: const Center(
-        child: Icon(Icons.person_outline, color: Colors.white),
       ),
     );
   }
@@ -148,10 +142,11 @@ class _ChatScreenState extends State<ChatScreen>
             color: const Color(0xFF0F1722).withOpacity(0.85),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: TextField(
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
+                    controller: textController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
                       hintText: 'Digite uma mensagem...',
                       hintStyle: TextStyle(color: Colors.white38),
                       border: InputBorder.none,
@@ -174,8 +169,8 @@ class _ChatScreenState extends State<ChatScreen>
                           ],
                         ),
                       ),
-                      child:
-                          const Icon(Icons.send, color: Colors.white, size: 18),
+                      child: const Icon(Icons.send,
+                          color: Colors.white, size: 18),
                     ),
                   ),
                 ),

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'core/theme.dart';
 
 void main() {
   runApp(const PulsoApp());
@@ -12,6 +13,7 @@ class PulsoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: PulsoTheme.dark(),
       home: const ChatScreen(),
     );
   }
@@ -48,7 +50,6 @@ class _ChatScreenState extends State<ChatScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F14),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -173,7 +174,8 @@ class _ChatScreenState extends State<ChatScreen>
                           ],
                         ),
                       ),
-                      child: const Icon(Icons.send, color: Colors.white, size: 18),
+                      child:
+                          const Icon(Icons.send, color: Colors.white, size: 18),
                     ),
                   ),
                 ),

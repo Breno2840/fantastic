@@ -20,7 +20,7 @@ class _NeonAvatarState extends State<NeonAvatar>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    glow = Tween(begin: 6.0, end: 14.0).animate(
+    glow = Tween(begin: 8.0, end: 16.0).animate(
       CurvedAnimation(parent: controller, curve: Curves.easeInOut),
     );
     super.initState();
@@ -32,8 +32,8 @@ class _NeonAvatarState extends State<NeonAvatar>
       animation: glow,
       builder: (_, __) {
         return Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: const LinearGradient(
@@ -49,34 +49,56 @@ class _NeonAvatarState extends State<NeonAvatar>
               ),
             ],
           ),
-          child: CustomPaint(painter: _AvatarPainter()),
+          child: CustomPaint(painter: _HackerPainter()),
         );
       },
     );
   }
 }
 
-class _AvatarPainter extends CustomPainter {
+class _HackerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final r = size.width / 2.8;
+    final w = size.width;
+    final h = size.height;
+    final center = Offset(w / 2, h / 2 + 2);
 
-    final paint = Paint()
+    final hoodPaint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFFFFFFF), Color(0xFFB0F0FF)],
-      ).createShader(Rect.fromCircle(center: center, radius: r))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+        colors: [Color(0xFF0B0F14), Color(0xFF1C2530)],
+      ).createShader(Rect.fromLTWH(0, 0, w, h));
 
-    canvas.drawCircle(center.translate(-6, -4), 4, paint);
-    canvas.drawCircle(center.translate(6, -4), 4, paint);
+    final facePaint = Paint()..color = const Color(0xFF0B0F14);
 
-    final mouth = Path()
-      ..moveTo(center.dx - 6, center.dy + 4)
-      ..quadraticBezierTo(center.dx, center.dy + 8, center.dx + 6, center.dy + 4);
+    final hoodPath = Path()
+      ..moveTo(w * 0.15, h * 0.75)
+      ..quadraticBezierTo(w * 0.1, h * 0.35, w * 0.5, h * 0.18)
+      ..quadraticBezierTo(w * 0.9, h * 0.35, w * 0.85, h * 0.75)
+      ..close();
 
-    canvas.drawPath(mouth, paint);
+    canvas.drawPath(hoodPath, hoodPaint);
+
+    canvas.drawOval(
+      Rect.fromCenter(center: center, width: w * 0.45, height: h * 0.45),
+      facePaint,
+    );
+
+    final eyePaint = Paint()
+      ..color = const Color(0xFF1BC9FF)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawLine(
+      Offset(w * 0.38, h * 0.52),
+      Offset(w * 0.46, h * 0.52),
+      eyePaint,
+    );
+
+    canvas.drawLine(
+      Offset(w * 0.54, h * 0.52),
+      Offset(w * 0.62, h * 0.52),
+      eyePaint,
+    );
   }
 
   @override

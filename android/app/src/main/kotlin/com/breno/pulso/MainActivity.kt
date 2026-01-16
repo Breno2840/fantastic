@@ -1,4 +1,4 @@
-package com.breno.pulso
+package com.breno.securemsg
 
 import io.flutter.embedding.android.FlutterActivity
 

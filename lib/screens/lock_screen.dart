@@ -12,23 +12,45 @@ class LockScreen extends StatefulWidget {
 
 class _LockScreenState extends State<LockScreen> {
   final TextEditingController _passController = TextEditingController();
+  int _attemptCount = 0;
+  bool _isLocked = false;
 
   void _verifyAccess() {
-    // Busca a chave das variáveis de ambiente ou usa o padrão
-    const masterKey = String.fromEnvironment('MASTER_KEY', defaultValue: 'NOT_SET');
+    if (_isLocked) return;
 
-    if (_passController.text == masterKey && masterKey != 'NOT_SET') {
+    const masterKey = String.fromEnvironment('MASTER_KEY', defaultValue: 'NOT_SET');
+    final inputKey = _passController.text;
+
+    if (inputKey == masterKey && masterKey != 'NOT_SET') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const ChatScreen()),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("ACESSO NEGADO: CHAVE INCORRETA"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _attemptCount++;
+      _passController.clear();
+
+      if (_attemptCount >= 5) {
+        _isLocked = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("ACESSO BLOQUEADO: TENTE NOVAMENTE MAIS TARDE."),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Future.delayed(const Duration(seconds: 10), () {
+          setState(() {
+            _isLocked = false;
+            _attemptCount = 0;
+          });
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("ACESSO NEGADO: CHAVE INCORRETA"),            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -59,6 +81,7 @@ class _LockScreenState extends State<LockScreen> {
                   TextField(
                     controller: _passController,
                     obscureText: true,
+                    enabled: !_isLocked,
                     style: const TextStyle(color: AppColors.neonCyan),
                     decoration: InputDecoration(
                       hintText: "INSIRA A CHAVE AES-256",
@@ -73,8 +96,7 @@ class _LockScreenState extends State<LockScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  SizedBox(
+                  const SizedBox(height: 24),                  SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(

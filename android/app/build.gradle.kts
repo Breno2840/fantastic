@@ -2,7 +2,6 @@ plugins {
     id("com.android.application")
     id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
-    // Adicione esta linha:
     id("com.google.gms.google-services")
 }
 
@@ -22,8 +21,7 @@ android {
 
     defaultConfig {
         applicationId = "com.breno.securemsg"
-        // O Firebase geralmente exige minSdk 21 ou superior
-        minSdk = 21 
+        minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode()
         versionName = flutter.versionName()
@@ -37,8 +35,9 @@ android {
 }
 
 dependencies {
-    // Adicione esta linha para importar o BoM do Firebase
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore")
 }
 
 flutter {

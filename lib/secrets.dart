@@ -1,3 +1,3 @@
 class AppSecrets {
-  static const String masterKey = "";
+  static const String masterKey = "test";
 }

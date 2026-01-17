@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -33,23 +38,11 @@ class CryptoMessengerApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.background,
         fontFamily: 'Courier',
-        colorScheme: const ColorScheme.dark(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.neonGreen,
+          brightness: Brightness.dark,
           primary: AppColors.neonGreen,
-          secondary: AppColors.neonCyan,
           surface: AppColors.surface,
-          background: AppColors.background,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          centerTitle: true,
-          titleTextStyle: TextStyle(
-            fontFamily: 'Courier',
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2.0,
-            color: AppColors.neonGreen,
-          ),
         ),
       ),
       home: const ChatScreen(),
@@ -67,39 +60,25 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final List<Map<String, dynamic>> _messages = [
-    {'text': 'Conexão segura estabelecida.', 'isMe': false, 'time': '10:00'},
-    {'text': 'A chave privada foi gerada?', 'isMe': true, 'time': '10:01'},
-    {'text': 'Sim. Algoritmo AES-256 ativo.', 'isMe': false, 'time': '10:02'},
-  ];
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _sendMessage() {
+  void _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
-    setState(() {
-      _messages.add({
-        'text': _controller.text,
-        'isMe': true,
-        'time':
-            '${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, '0')}',
-      });
-      _controller.clear();
+    
+    String msg = _controller.text;
+    _controller.clear();
+
+    await _firestore.collection('messages').add({
+      'text': msg,
+      'senderId': 'user_temp_id', 
+      'timestamp': FieldValue.serverTimestamp(),
     });
 
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
@@ -109,7 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         flexibleSpace: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(color: Colors.black.withOpacity(0.2)),
           ),
         ),
@@ -118,36 +97,33 @@ class _ChatScreenState extends State<ChatScreen> {
           children: const [
             Icon(Icons.lock_outline, color: AppColors.neonGreen, size: 18),
             SizedBox(width: 8),
-            Text("SECURE_MESSAGE"),
+            Text("SECURE_MESSAGE", style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.bold, color: AppColors.neonGreen)),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner, color: AppColors.neonCyan),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Stack(
         children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: CyberGridPainter(offset: 0.0),
-            ),
-          ),
+          Positioned.fill(child: CustomPaint(painter: CyberGridPainter())),
           Column(
             children: [
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = _messages[index];
-                    return MessageBubble(
-                      text: msg['text'],
-                      isMe: msg['isMe'],
-                      time: msg['time'],
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _firestore.collection('messages').orderBy('timestamp').snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const Center(child: CircularProgressIndicator(color: AppColors.neonGreen));
+                    
+                    var docs = snapshot.data!.docs;
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 110, 16, 16),
+                      itemCount: docs.length,
+                      itemBuilder: (context, index) {
+                        var data = docs[index].data() as Map<String, dynamic>;
+                        return MessageBubble(
+                          text: data['text'] ?? '',
+                          isMe: data['senderId'] == 'user_temp_id',
+                        );
+                      },
                     );
                   },
                 ),
@@ -162,20 +138,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        color: AppColors.background.withOpacity(0.95),
-        border: Border(
-          top: BorderSide(
-              color: AppColors.neonGreen.withOpacity(0.15), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.neonGreen.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -4),
-          )
-        ],
+        color: AppColors.background.withOpacity(0.8),
+        border: Border(top: BorderSide(color: AppColors.neonGreen.withOpacity(0.1))),
       ),
       child: SafeArea(
         child: Row(
@@ -183,61 +149,25 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: TextField(
                 controller: _controller,
-                style: const TextStyle(color: AppColors.textPrimary),
-                cursorColor: AppColors.neonGreen,
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  hintText: "Digite uma mensagem...",
-                  hintStyle: TextStyle(color: Colors.grey[600]),
+                  hintText: "Mensagem criptografada...",
                   filled: true,
                   fillColor: AppColors.surface,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide(
-                        color: AppColors.neonCyan.withOpacity(0.3), width: 1),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide:
-                        const BorderSide(color: AppColors.neonGreen, width: 1.5),
-                  ),
-                  prefixIcon: Icon(Icons.keyboard_alt_outlined,
-                      color: Colors.grey[500]),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            _buildSendButton(),
+            const SizedBox(width: 10),
+            FloatingActionButton(
+              onPressed: _sendMessage,
+              backgroundColor: AppColors.neonGreen,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.send_rounded, color: Colors.black),
+            ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSendButton() {
-    return GestureDetector(
-      onTap: _sendMessage,
-      child: Container(
-        height: 50,
-        width: 50,
-        decoration: BoxDecoration(
-          color: AppColors.neonGreen,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.neonGreen.withOpacity(0.4),
-              blurRadius: 8,
-              spreadRadius: 2,
-            )
-          ],
-        ),
-        child:
-            const Icon(Icons.send_rounded, color: Colors.black, size: 24),
       ),
     );
   }
@@ -246,117 +176,44 @@ class _ChatScreenState extends State<ChatScreen> {
 class MessageBubble extends StatelessWidget {
   final String text;
   final bool isMe;
-  final String time;
 
-  const MessageBubble({
-    super.key,
-    required this.text,
-    required this.isMe,
-    required this.time,
-  });
+  const MessageBubble({super.key, required this.text, required this.isMe});
 
   @override
   Widget build(BuildContext context) {
-    final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final color = isMe ? AppColors.neonCyan : AppColors.neonGreen;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: align,
-        children: [
-          Container(
-            constraints:
-                BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.black,
-              border: Border.all(color: color.withOpacity(0.6), width: 1),
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(0),
-                topRight: const Radius.circular(0),
-                bottomLeft:
-                    isMe ? const Radius.circular(0) : const Radius.circular(12),
-                bottomRight:
-                    isMe ? const Radius.circular(12) : const Radius.circular(0),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: color.withOpacity(0.9),
-                    fontSize: 15,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          border: Border.all(color: color.withOpacity(0.5)),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(isMe ? 15 : 0),
+            bottomRight: Radius.circular(isMe ? 0 : 15),
+            topLeft: const Radius.circular(15),
+            topRight: const Radius.circular(15),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 4, right: 2, left: 2),
-            child: Text(
-              time,
-              style: TextStyle(
-                color: Colors.grey[700],
-                fontSize: 10,
-              ),
-            ),
-          ),
-        ],
+        ),
+        child: Text(text, style: TextStyle(color: color)),
       ),
     );
   }
 }
 
 class CyberGridPainter extends CustomPainter {
-  final double offset;
-
-  CyberGridPainter({required this.offset});
-
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = AppColors.neonGreen.withOpacity(0.05)
-      ..strokeWidth = 1.0;
-
-    const double gridSize = 40.0;
-
-    for (double x = 0; x < size.width; x += gridSize) {
+    final paint = Paint()..color = AppColors.neonGreen.withOpacity(0.03)..strokeWidth = 1.0;
+    for (double x = 0; x < size.width; x += 40) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
-
-    for (double y = 0; y < size.height; y += gridSize) {
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
-        paint,
-      );
+    for (double y = 0; y < size.height; y += 40) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
-
-    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-    final gradient = RadialGradient(
-      center: Alignment.center,
-      radius: 1.0,
-      colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
-      stops: const [0.6, 1.0],
-    );
-
-    final paintVignette = Paint()..shader = gradient.createShader(rect);
-    canvas.drawRect(rect, paintVignette);
   }
-
   @override
-  bool shouldRepaint(covariant CyberGridPainter oldDelegate) {
-    return false;
-  }
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

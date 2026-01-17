@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'secrets.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,7 +61,9 @@ class _LockScreenState extends State<LockScreen> {
   final TextEditingController _passController = TextEditingController();
 
   void _verifyAccess() {
-    if (_passController.text == AppSecrets.masterKey) {
+    const masterKey = String.fromEnvironment('MASTER_KEY', defaultValue: 'NOT_SET');
+
+    if (_passController.text == masterKey && masterKey != 'NOT_SET') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const ChatScreen()),

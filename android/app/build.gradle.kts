@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.breno.securemsg"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973" // Mantemos isso pois resolveu o erro anterior
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -35,7 +35,6 @@ android {
 }
 
 dependencies {
-    // Voltamos para a 33.1.0 que é estável com Kotlin 1.9
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore")
